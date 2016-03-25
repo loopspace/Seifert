@@ -1,0 +1,247 @@
+\documentclass{article}
+\usepackage[scale=.9]{geometry}
+\thispagestyle{empty}
+\pagestyle{empty}
+
+\usepackage{tikz}
+\usetikzlibrary{calc,hobby,intersections}
+
+\makeatletter
+\tikzset{
+  use path for main/.code={%
+    \tikz@addmode{%
+      \expandafter\pgfsyssoftpath@setcurrentpath\csname tikz@intersect@path@name@#1\endcsname
+    }%
+  },
+  use path for actions/.code={%
+    \expandafter\def\expandafter\tikz@preactions\expandafter{\tikz@preactions\expandafter\let\expandafter\tikz@actions@path\csname tikz@intersect@path@name@#1\endcsname}%
+  },
+  use path/.style={%
+    use path for main=#1,
+    use path for actions=#1,
+  }
+}
+
+\def\getparams#1{
+  \tikz@scan@one@point\getrest#1,,,,\pgf@stop
+}
+
+\def\getrest#1,#2,#3,#4,#5\pgf@stop{
+  #1%
+  \edef\coordx{\the\pgf@x}%
+  \edef\coordy{\the\pgf@y}%
+  \def\ang{#2}%
+  \def\offset{#3}%
+  \def\tablabel{#4}%
+}
+
+
+\tikzset{
+  siefert/.is family,
+  siefert/.cd,
+  width/.initial=.5cm,
+  length/.initial=3cm,
+  radius/.initial=1cm,
+  torus radius/.initial=7,
+  label style/.style={font=\Huge},
+  /tikz/.cd,
+  surface/.pic={
+    \pgfkeysgetvalue{/tikz/siefert/width}{\swidth}
+    \pgfkeysgetvalue{/tikz/siefert/length}{\slength}
+    \pgfkeysgetvalue{/tikz/siefert/radius}{\sradius}
+    \def\surfacebdry{}
+    \foreach \k in {#1} {
+      \getparams\k
+      \ifx\ang\empty
+      \xdef\surfacebdry{\surfacebdry .. (\coordx,\coordy)}
+      \xdef\lastpt{(\coordx,\coordy)}
+      \else
+      \pgfmathsetmacro\iang{\ang+180}
+      \xdef\surfacebdry{\surfacebdry
+        .. ([in angle=\iang]$(\coordx,\coordy)+(\ang-90:\swidth)$)
+        to[out=\ang,in=-90*\offset+\ang]
+        %      --
+        ++($(\ang: {\sradius*(1-abs(\offset))/2 + \sradius+\swidth*\offset}) +(\ang+90:{-\swidth*(1-abs(\offset))+\swidth+\offset*\sradius})$)
+        -- ++(\ang+90*\offset:\slength)
+        -- ++(\ang+90+90*\offset:2*\swidth)
+        -- ++(\ang+90*\offset:-\slength)
+        to[out=-90*\offset+\ang,in=\ang] 
+        %--
+        ([out angle=\iang]$(\coordx,\coordy)-(\ang-90:\swidth)$)
+      }
+      \xdef\lastpt{([out angle=\iang]$(\coordx,\coordy)-(\ang-90:\swidth)$)}
+      \fi
+    }
+    \xdef\surfacebdry{\lastpt \surfacebdry}
+
+    \path[name path=outline,use Hobby shortcut] \surfacebdry;
+
+    \begin{scope}
+    \clip[use path=outline];
+    
+    \draw[use path=outline,dashed,line width=2*\swidth];
+    \draw[use path=outline,white,line width=2*\swidth-1mm];
+    \end{scope}
+
+    \foreach \k in {#1} {
+      \getparams\k
+      \ifx\ang\empty
+      \else
+      \draw[line width=1mm] ($(\coordx,\coordy)+(\ang:\sradius)+(\ang+90*\offset:{\sradius*(1 + abs(\offset))/2 + \slength-\swidth})+(\ang+90*\offset+90:\swidth)$) -- +(\ang+90*\offset+90:-2*\swidth);
+      \node[rotate=\ang+180,siefert/label style/.try] at ($(\coordx,\coordy)+(\ang:\sradius)+(\ang+90*\offset:{\sradius*(1 + abs(\offset))/2 + \slength-\swidth/2})$) {\tablabel};
+      \fi
+    }
+
+    \draw[use path=outline,line width=1mm];
+  },
+  torus surface/.code={
+    \def\points##1{}
+    \pgfkeysgetvalue{/tikz/siefert/torus radius}{\sradius}
+    \foreach \k in {1,...,#1} {
+      \pgfmathsetmacro\ang{360/#1*\k}
+      \pgfmathsetmacro\coordx{\sradius * cos(\ang)}
+      \pgfmathsetmacro\coordy{\sradius * sin(\ang)}
+      \pgfmathsetmacro\ang{360/#1*\k}
+      \edef\tablabel{\@Alph{\k}}
+      \xdef\points{\points,{(\coordx,\coordy),\ang,1,\tablabel}}
+    }
+    \xdef\dopic{
+      \noexpand\tikzset{
+        pic type={
+          surface={
+            \points
+          }
+        }
+      }
+    }
+    \dopic
+  }
+}
+\makeatother
+
+
+
+\tikzset{
+  which Hobby path/.code={
+    \message{\pgfkeysvalueof{/tikz/designated Hobby path}}
+  }
+}
+
+\begin{document}
+
+\begin{tikzpicture}[remember picture, overlay]
+\coordinate (o) at (current page.center);
+\pic[
+  siefert/width=1cm,
+  siefert/length=2cm,
+  siefert/radius=3cm,
+] at (o) {surface={
+    {(4,0),90,-1,A},
+    {(0,0),90,0,B},
+    {(-4,0),90,1,C}%
+}};
+\end{tikzpicture}
+
+%% \begin{tikzpicture}[use Hobby shortcut]
+%% \draw ([which Hobby path,out angle=0]$(0,0)+(0,1)$) .. (2,2) .. ([which Hobby path,in angle=180]$(4,0)+(0,1)$)
+%% -- 
+%% ([which Hobby path,out angle=0]$(5,0)+(0,1)$) .. (7,2) .. ([which Hobby path,in angle=180]$(9,0)+(0,1)$);
+%% \end{tikzpicture}
+%% \end{document}
+
+\newpage
+
+\begin{tikzpicture}[remember picture, overlay]
+\coordinate (o) at (current page.center);
+\pic at ([yshift=1cm]o) {surface={
+    {(6.5,0),,},
+    {(0,6),90,1},
+    {(-6.5,0),,},
+    {(-6.5,-4),-90,1},
+    {(0,-3),-90,1},
+    {(6.5,-4),-90,1}%
+}};
+\pic at ([yshift=-9cm]o) {surface={
+    {(-4,0),180,1},
+    {(5,0),0,1}%
+    }};
+\pic at ([yshift=6cm,xshift=-2cm]o) {surface={
+%    {(0,4.1),,},
+    {(-6.5,0),-90,1},
+%    {(0,3),,},
+    {(6.5,0),-90,1}%
+    }};
+\end{tikzpicture}
+
+\newpage
+
+\foreach \twist in {3,...,7} {
+
+  \begin{tikzpicture}[remember picture, overlay]
+  \coordinate (o) at (current page.center);
+  \pic[torus surface=\twist,at=(o)];
+  \end{tikzpicture}
+
+  \newpage
+
+}
+\end{document}
+\begin{tikzpicture}[remember picture, overlay]
+\coordinate (o) at (current page.center);
+\pic at ($(o)+(4,4)$) {surface={
+    {(0,6),180,0},
+    {(0,3),180,0},
+    {(3,0),-90,0}
+  }};
+\pic at ($(o)+(-4,4)$) {surface={
+    {(0,3),0,0},
+    {(0,6),0,0},
+    {(-3,0),-90,0}
+  }};
+\pic at ($(o)+(-4,-4)$) {surface={
+    {(0,-3),0,0},
+    {(-3,0),90,0}
+  }};
+\pic at ($(o)+(4,-4)$) {surface={
+    {(0,-3),180,0},
+    {(3,0),90,0}
+}};
+\draw[ultra thick,->] ($(o)+(-4,-4)$) ++(3,-3) +(.3,-.8) to[bend right] +(.3,.8);
+\draw[ultra thick,->] ($(o)+(4,-4)$) ++(3,3) +(.8,.3) to[bend right] +(-.8,.3);
+\draw[ultra thick,->] ($(o)+(-4,4)$) ++(-3,-3) +(-.8,-.3) to[bend right] +(.8,-.3);
+\draw[ultra thick,->] ($(o)+(4,4)$) ++(-3,3) +(-.3,.8) to[bend right] +(-.3,-.8);
+\draw[ultra thick,->] ($(o)+(4,4)$) ++(-3,6) +(-.3,.8) to[bend right] +(-.3,-.8);
+\end{tikzpicture}
+
+\newpage
+
+\begin{tikzpicture}[remember picture, overlay]
+\coordinate (o) at (current page.center);
+\pic at ($(o)+(4,4)$) {surface={
+    {(0,6),180,0},
+    {(0,3),180,0},
+    {(3,0),-90,0}%
+  }};
+\pic at ($(o)+(-4,4)$) {surface={
+    {(0,3),0,0},
+    {(0,6),0,0},
+    {(-3,0),-90,0}%
+  }};
+\pic at ($(o)+(-4,-4)$) {surface={
+    {(0,-3),0,0},
+    {(-3,0),90,0}%
+  }};
+\pic at ($(o)+(4,-4)$) {surface={
+    {(0,-3),180,0},
+    {(3,0),90,0}%
+}};
+\draw[ultra thick,->] ($(o)+(4,-4)$) ++(-3,-3) +(-.3,-.8) to[bend left] +(-.3,.8);
+\draw[ultra thick,->] ($(o)+(-4,-4)$) ++(3,-3) +(.3,.8) to[bend left] +(.3,-.8);
+\draw[ultra thick,->] ($(o)+(-4,-4)$) ++(-3,3) +(-.8,.3) to[bend left] +(.8,.3);
+\draw[ultra thick,->] ($(o)+(4,4)$) ++(3,-3) +(.8,-.3) to[bend left] +(-.8,-.3);
+\draw[ultra thick,->] ($(o)+(-4,4)$) ++(3,3) +(.3,.8) to[bend left] +(.3,-.8);
+\draw[ultra thick,->] ($(o)+(-4,4)$) ++(3,6) +(.3,.8) to[bend left] +(.3,-.8);
+\end{tikzpicture}
+
+
+\end{document}
