@@ -36,6 +36,7 @@
   \def\sft@label{#4}%
 }
 
+\newif\if@seifert@torus@reverse
 
 \tikzset{
   seifert/.is family,
@@ -88,6 +89,7 @@
       \sft@getparams\k
       \ifx\sft@ang\empty
       \else
+      \fill[gray, fill opacity=.5, seifert/fold/.try] ($(\sft@x,\sft@y)+(\sft@ang:\sft@radius)+(\sft@ang+90*\sft@offset:{\sft@radius*(1 + abs(\sft@offset))/2 + \sft@length-\sft@width})+(\sft@ang+90*\sft@offset+90:\sft@width)$)  -- ++ (\sft@ang+90*\sft@offset+90:-2*\sft@width) -- ++ (\sft@ang+90*\sft@offset:-.666*\sft@length) --  ++ (\sft@ang+90*\sft@offset+90:2*\sft@width) -- cycle; 
       \draw[line width=1mm] ($(\sft@x,\sft@y)+(\sft@ang:\sft@radius)+(\sft@ang+90*\sft@offset:{\sft@radius*(1 + abs(\sft@offset))/2 + \sft@length-\sft@width})+(\sft@ang+90*\sft@offset+90:\sft@width)$) -- +(\sft@ang+90*\sft@offset+90:-2*\sft@width);
       \node[rotate=\sft@ang+180,seifert/label style/.try] at ($(\sft@x,\sft@y)+(\sft@ang:\sft@radius)+(\sft@ang+90*\sft@offset:{\sft@radius*(1 + abs(\sft@offset))/2 + \sft@length-\sft@width/2})$) {\sft@label};
       \fi
@@ -95,12 +97,18 @@
 
     \draw[use path=outline,line width=1mm];
   },
+  seifert/reverse/.is if=@seifert@torus@reverse,
   torus surface/.code={
     \def\sft@points##1{}
     \pgfkeysgetvalue{/tikz/seifert/torus radius}{\sft@radius}
-    \foreach \k in {1,...,#1} {
+    \foreach[evaluate=\k as \nk using #1 + 1 - \k] \k in {1,...,#1} {
+    \if@seifert@torus@reverse
+    \let\lbl@k=\nk
+    \else
+    \let\lbl@k=\k
+    \fi
       \pgfmathsetmacro\sft@ang{360/#1*\k}
-      \edef\sft@label{\@Alph{\k}}
+      \edef\sft@label{\@Alph{\lbl@k}}
       \xdef\sft@points{\sft@points,{(\sft@ang:\sft@radius),\sft@ang,1,\sft@label}}
     }
     \xdef\sft@dopic{
@@ -118,6 +126,97 @@
 \makeatother
 
 \begin{document}
+
+  \begin{tikzpicture}[
+  remember picture,
+  overlay,
+  seifert/label style/.style={font=\large},
+      seifert/width=.5cm,
+    seifert/length=1cm,
+    seifert/radius=1.5cm,
+  ]
+  \coordinate (o) at (current page.center);
+  \pic at
+    ($(current page.center)!.5!(current page.north east)$)
+   {surface={
+    {(0,-3),-90,1,A},
+    {(0,3),90,1,B}%
+    }};
+  \pic at
+  ($(current page.center)!.5!(current page.north west)$)
+   {surface={
+    {(0,-3),-90,-1,A},
+    {(0,3),90,1,B}%
+    }};
+  \pic at
+  ($(current page.center)!.5!(current page.north)$)
+   {surface={
+    {(0,-3),-90,0,A},
+    {(0,3),90,1,B}%
+    }};
+  \pic at
+    ($(current page.center)!.5!(current page.south east)$)
+   {surface={
+    {(0,-3),-90,1,A},
+    {(0,3),90,1,B}%
+    }};
+  \pic at
+  ($(current page.center)!.5!(current page.south west)$)
+   {surface={
+    {(0,-3),-90,1,A},
+    {(0,3),90,1,B}%
+    }};
+  \pic at
+  ($(current page.center)!.5!(current page.south)$)
+   {surface={
+    {(0,-3),-90,0,A},
+    {(0,3),90,1,B}%
+    }};
+\end{tikzpicture}
+%\end{document}
+\newpage
+
+  \begin{tikzpicture}[remember picture, overlay, seifert/label style/.style={font=\large}]
+  \coordinate (o) at (current page.center);
+  \pic[
+    seifert/width=.5cm,
+    seifert/length=1cm,
+    seifert/radius=1.5cm,
+    seifert/torus radius=2.5cm,
+    torus surface=3,
+    label style/.style={font=\large},
+    at=($(current page.center)!.5!(current page.north east)$)
+  ];
+  \pic[
+    seifert/width=.5cm,
+    seifert/length=1cm,
+    seifert/radius=1.5cm,
+    seifert/torus radius=2.5cm,
+    seifert/reverse=true,
+    torus surface=3,
+    at=($(current page.center)!.5!(current page.north west)$)
+  ];
+  \pic[
+    seifert/width=.5cm,
+    seifert/length=1cm,
+    seifert/radius=1.5cm,
+    seifert/torus radius=2.5cm,
+    torus surface=4,
+    at=($(current page.center)!.5!(current page.south east)$)
+  ];
+  \pic[
+    seifert/width=.5cm,
+    seifert/length=1cm,
+    seifert/radius=1.5cm,
+    seifert/torus radius=2.5cm,
+    seifert/reverse=true,
+    torus surface=4,
+    at=($(current page.center)!.5!(current page.south west)$)
+  ];
+  \end{tikzpicture}
+
+\end{document}
+\newpage
 
 \begin{tikzpicture}[remember picture, overlay]
 \coordinate (o) at (current page.center);
@@ -193,7 +292,7 @@
   \newpage
 
 }
-\end{document}
+%\end{document}
 \begin{tikzpicture}[remember picture, overlay]
 \coordinate (o) at (current page.center);
 \pic at ($(o)+(4,4)$) {surface={
